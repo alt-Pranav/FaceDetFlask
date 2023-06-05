@@ -3,33 +3,41 @@
 # An object of Flask class is our WSGI application.
 from flask import Flask, render_template, Response
 import cv2
-import mtcnn
+import mediapipe as mp
 
 # Flask constructor takes the name of
 # current module (__name__) as argument.
 app = Flask(__name__)
 
-def detect_bounding_box(frame):
-    # detect faces in the image
-    faces = detector.detect_faces(frame)
-    """ for face in faces:
-        print(face) """
-    
-    for face in faces:
-        x, y, width, height = face['box']
-        conf = face['confidence']
-        cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 4)
-        cv2.putText(frame, str(conf)[:4], (x+width, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
-    return faces
 
 def capture_by_frames(): 
     global camera
-    global detector
+    mp_face_detection = mp.solutions.face_detection
+    face_detection = mp_face_detection.FaceDetection()
     camera = cv2.VideoCapture(0)
     while True:
         success, frame = camera.read()  # read the camera frame
-        detector=mtcnn.MTCNN()
-        faces=detect_bounding_box(frame)
+        # Convert the frame to RGB (BlazeFace requires RGB input)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Detect faces using BlazeFace
+        results = face_detection.process(frame_rgb)
+        if results.detections:
+            for detection in results.detections:
+                # Extract the bounding box coordinates
+                box = detection.location_data.relative_bounding_box
+                #print(detection)
+                conf = str(detection.score)[1:5]
+                # Convert relative coordinates to absolute coordinates
+                h, w, _ = frame.shape
+                x = int(box.xmin * w)
+                y = int(box.ymin * h)
+                width = int(box.width * w)
+                height = int(box.height * h)
+                # Draw the bounding box on the frame
+                cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
+                cv2.putText(frame, conf, (x+width, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2)
+
 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
