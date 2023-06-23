@@ -15,8 +15,14 @@ def capture_by_frames():
     mp_face_detection = mp.solutions.face_detection
     face_detection = mp_face_detection.FaceDetection()
     camera = cv2.VideoCapture(0)
+    # initial combo 1280 X 720
+    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     while True:
+	
         success, frame = camera.read()  # read the camera frame
+        #print(frame.shape) # default is 480 h and 640 w
+
         # Convert the frame to RGB (BlazeFace requires RGB input)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -27,7 +33,7 @@ def capture_by_frames():
                 # Extract the bounding box coordinates
                 box = detection.location_data.relative_bounding_box
                 #print(detection)
-                conf = str(detection.score)[1:5]
+                conf = detection.score
                 # Convert relative coordinates to absolute coordinates
                 h, w, _ = frame.shape
                 x = int(box.xmin * w)
@@ -35,8 +41,34 @@ def capture_by_frames():
                 width = int(box.width * w)
                 height = int(box.height * h)
                 # Draw the bounding box on the frame
-                cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
-                cv2.putText(frame, conf, (x+width, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2)
+                # note to self: y + n pushes down by n
+                # MAIN BOUNDING BOX: cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
+		
+
+                face_acc = 'FACE: {0}'.format(str(conf)[1:5])
+                face_acc_size, _ = cv2.getTextSize(face_acc, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                
+                if conf and len(str(conf)) > 5:
+                    if float(str(conf[0])[:5]) >= 0.9:
+                        seenText = 'I SEE YOU'
+                        seenText_size, _ = cv2.getTextSize(seenText, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                        cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 0, 255), 2)
+                        cv2.rectangle(frame, (x, y), (x+seenText_size[0], y-seenText_size[1]), (0, 0, 255), -1)
+                        cv2.putText(frame, seenText, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                
+                    else:
+                        unseenText = 'ARE YOU THERE?'
+                        unseenText_size, _ = cv2.getTextSize(unseenText, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                        cv2.rectangle(frame, (x, y), (x+unseenText_size[0], y-unseenText_size[1]), (255, 0, 0), -1)
+                        cv2.putText(frame, unseenText, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+                # Draw the filled background rectangle
+                # MAIN BG RECT: cv2.rectangle(frame, (x, y), (x+face_acc_size[0], y-face_acc_size[1]), (0, 255, 0), -1)
+
+                #cv2.rectangle(frame, (x+width, y), (x +width + 100, y - 30), (0, 255, 0), -1)# black box bg
+                #cv2.putText(frame, conf, (x+width, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0,0), 10) # for black outline on accuracy text
+                #cv2.putText(frame, conf, (x+width, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2)
+                # MAIN FACE ACC: cv2.putText(frame, face_acc, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)                
 
 
         ret, buffer = cv2.imencode('.jpg', frame)
@@ -52,17 +84,17 @@ def capture_by_frames():
 @app.route('/')
 # ‘/’ URL is bound with hello_world() function.
 def index():
-	return render_template('index.html')
+	return render_template('mystart.html')
 
 @app.route('/start', methods=['POST'])
 def start():
-	return render_template('index.html')
+	return render_template('mystart.html')
 
 @app.route('/stop', methods=['POST'])
 def stop():
 	if camera.isOpened():
 		camera.release()
-	return render_template('stop.html')
+	return render_template('mystop.html')
 
 @app.route('/video_capture')
 def video_capture():
@@ -73,4 +105,5 @@ if __name__ == '__main__':
 
 	# run() method of Flask class runs the application
 	# on the local development server.
-	app.run(port=5000)
+    # deug = True enables hot reload
+	app.run(debug=True, port=5000)
