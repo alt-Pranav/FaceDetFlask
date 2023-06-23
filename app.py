@@ -4,6 +4,7 @@
 from flask import Flask, render_template, Response
 import cv2
 import mediapipe as mp
+import numpy as np
 
 # Flask constructor takes the name of
 # current module (__name__) as argument.
@@ -52,7 +53,15 @@ def capture_by_frames():
                     if float(str(conf[0])[:5]) >= 0.9:
                         seenText = 'I SEE YOU'
                         seenText_size, _ = cv2.getTextSize(seenText, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                        overlay = frame.copy()
                         cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 0, 255), 2)
+                        cv2.rectangle(overlay, (x, y), (x+width, y+height), (0, 0, 255), -1)  
+    
+                        alpha = 0.4  # Transparency factor.
+                        
+                        # Following line overlays transparent rectangle
+                        # over the image
+                        frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
                         cv2.rectangle(frame, (x, y), (x+seenText_size[0], y-seenText_size[1]), (0, 0, 255), -1)
                         cv2.putText(frame, seenText, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 

@@ -1,3 +1,7 @@
 flapp
 face.py
 blaze.py
+test.py
+node_modules
+package-lock.json
+package.json
